@@ -1,0 +1,705 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#07111f">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="Lokalny kalkulator czasu pracy i szacowanych zarobków z historią sesji oraz eksportem CSV.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <title>Kalkulator Zarobków — aplikacja</title>
+  <style>
+    :root {
+      --bg: #07111f;
+      --bg-soft: #0b1728;
+      --panel: #102338;
+      --panel-2: #0c1b2d;
+      --line: rgba(147, 184, 212, .18);
+      --line-strong: rgba(147, 184, 212, .31);
+      --text: #f5fbff;
+      --muted: #9db2c4;
+      --mint: #59e0c1;
+      --blue: #57a8ff;
+      --danger: #ff7d91;
+      --warning: #f6c96b;
+      --shadow: 0 28px 80px rgba(0, 0, 0, .32);
+      --radius: 24px;
+    }
+
+    * { box-sizing: border-box; }
+    html { min-width: 320px; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 84% 5%, rgba(87, 168, 255, .12), transparent 30rem),
+        radial-gradient(circle at 6% 85%, rgba(89, 224, 193, .09), transparent 34rem),
+        var(--bg);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.5;
+    }
+
+    button, input, textarea { font: inherit; }
+    button { cursor: pointer; }
+    a { color: inherit; }
+    .container { width: min(1220px, calc(100% - 36px)); margin: 0 auto; }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      border-bottom: 1px solid var(--line);
+      background: rgba(7, 17, 31, .82);
+      backdrop-filter: blur(18px);
+    }
+    .topbar-inner { min-height: 72px; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+    .brand { display: inline-flex; align-items: center; gap: 12px; text-decoration: none; }
+    .brand-mark { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 14px; color: #07111f; background: linear-gradient(135deg, var(--mint), var(--blue)); font-weight: 900; }
+    .brand strong { display: block; font-size: 14px; }
+    .brand small { display: block; color: var(--muted); font-size: 11px; }
+    .top-links { display: flex; align-items: center; gap: 10px; }
+    .top-link { padding: 9px 13px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); text-decoration: none; font-size: 12px; font-weight: 750; }
+    .top-link:hover { color: var(--text); border-color: var(--line-strong); }
+
+    main { padding: 40px 0 70px; }
+    .page-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 24px; }
+    .eyebrow { color: var(--mint); font-size: 12px; font-weight: 850; letter-spacing: .13em; text-transform: uppercase; }
+    h1 { margin: 8px 0 0; font-size: clamp(34px, 5vw, 54px); line-height: 1; letter-spacing: -.045em; }
+    .privacy-note { max-width: 410px; margin: 0; color: var(--muted); font-size: 13px; text-align: right; }
+
+    .active-card {
+      position: relative;
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap: 30px;
+      align-items: center;
+      padding: 32px;
+      border: 1px solid rgba(89, 224, 193, .19);
+      border-radius: 30px;
+      background: linear-gradient(125deg, rgba(17, 54, 61, .86), rgba(13, 30, 49, .94));
+      box-shadow: var(--shadow);
+    }
+    .active-card::after { content: ""; position: absolute; right: -100px; top: -140px; width: 360px; height: 360px; border-radius: 50%; background: rgba(87, 168, 255, .12); filter: blur(12px); }
+    .active-main, .active-meta { position: relative; z-index: 1; }
+    .active-top { display: flex; align-items: center; gap: 10px; }
+    .status-pill { display: inline-flex; align-items: center; gap: 7px; padding: 7px 11px; border-radius: 999px; color: #baffef; background: rgba(89, 224, 193, .12); font-size: 11px; font-weight: 900; letter-spacing: .08em; }
+    .status-pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--mint); }
+    .status-pill.idle { color: #b6c7d5; background: rgba(151, 177, 198, .11); }
+    .status-pill.idle::before { background: #8096aa; }
+    .active-label { color: var(--muted); font-size: 12px; font-weight: 800; letter-spacing: .11em; text-transform: uppercase; }
+    .amount { margin-top: 15px; font-size: clamp(50px, 8vw, 84px); line-height: .94; font-weight: 900; letter-spacing: -.06em; font-variant-numeric: tabular-nums; }
+    .time-line { margin-top: 16px; color: #b9ccda; font-size: 17px; font-variant-numeric: tabular-nums; }
+    .active-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .stat { min-height: 104px; padding: 18px; border: 1px solid var(--line); border-radius: 19px; background: rgba(7, 17, 31, .36); }
+    .stat span { display: block; color: var(--muted); font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+    .stat strong { display: block; margin-top: 9px; font-size: 18px; }
+
+    .workspace { display: grid; grid-template-columns: minmax(330px, .78fr) minmax(0, 1.22fr); gap: 18px; margin-top: 18px; align-items: start; }
+    .panel { border: 1px solid var(--line); border-radius: var(--radius); background: rgba(13, 30, 49, .78); box-shadow: 0 18px 48px rgba(0, 0, 0, .18); }
+    .panel-inner { padding: 24px; }
+    .panel-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; margin-bottom: 20px; }
+    .panel-header h2 { margin: 0; font-size: 22px; letter-spacing: -.02em; }
+    .panel-header p { margin: 5px 0 0; color: var(--muted); font-size: 13px; }
+
+    .mode-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 5px; border: 1px solid var(--line); border-radius: 16px; background: rgba(7, 17, 31, .48); }
+    .mode-tab { min-height: 44px; border: 0; border-radius: 12px; color: var(--muted); background: transparent; font-weight: 800; }
+    .mode-tab.active { color: #07111f; background: linear-gradient(90deg, var(--mint), #7aefd7); }
+
+    .field { margin-top: 18px; }
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    label { display: block; margin-bottom: 8px; color: #ccdae4; font-size: 13px; font-weight: 750; }
+    input[type="number"], input[type="time"], textarea {
+      width: 100%;
+      min-height: 48px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      outline: none;
+      color: var(--text);
+      background: rgba(7, 17, 31, .62);
+      transition: border-color .2s ease, box-shadow .2s ease;
+    }
+    input[type="number"], input[type="time"] { padding: 0 14px; }
+    textarea { min-height: 92px; padding: 12px 14px; resize: vertical; }
+    input:focus, textarea:focus { border-color: rgba(89, 224, 193, .62); box-shadow: 0 0 0 4px rgba(89, 224, 193, .08); }
+    input:disabled { opacity: .45; cursor: not-allowed; }
+    .help { margin: 7px 0 0; color: var(--muted); font-size: 11px; }
+    .check-row { display: flex; align-items: flex-start; gap: 10px; margin-top: 16px; color: #c3d3de; font-size: 13px; }
+    .check-row input { width: 17px; height: 17px; margin: 2px 0 0; accent-color: var(--mint); }
+
+    .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+    .button { min-height: 48px; border: 1px solid var(--line); border-radius: 14px; font-weight: 850; transition: transform .15s ease, opacity .15s ease, border-color .15s ease; }
+    .button:hover:not(:disabled) { transform: translateY(-1px); }
+    .button:disabled { cursor: not-allowed; opacity: .38; }
+    .button-primary { color: #07111f; border-color: transparent; background: linear-gradient(90deg, var(--mint), #7aefd7); }
+    .button-stop { color: #ffdce2; border-color: rgba(255, 125, 145, .28); background: rgba(255, 125, 145, .09); }
+    .button-muted { color: #d5e1e9; background: rgba(16, 35, 56, .6); }
+    .button-danger { color: #ffdce2; border-color: rgba(255, 125, 145, .24); background: transparent; }
+    .wide { grid-column: 1 / -1; }
+
+    .summary-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 18px; }
+    .summary-item { padding: 15px; border: 1px solid var(--line); border-radius: 17px; background: rgba(7, 17, 31, .38); }
+    .summary-item span { display: block; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; font-weight: 800; }
+    .summary-item strong { display: block; margin-top: 5px; font-size: 18px; }
+
+    .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 18px; }
+    table { width: 100%; min-width: 720px; border-collapse: collapse; }
+    th, td { padding: 14px 15px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    th { color: var(--muted); background: rgba(7, 17, 31, .4); font-size: 10px; font-weight: 850; letter-spacing: .09em; text-transform: uppercase; }
+    td { color: #d7e3eb; font-size: 13px; }
+    tbody tr:last-child td { border-bottom: 0; }
+    .money { color: var(--mint); font-weight: 850; white-space: nowrap; }
+    .date-main { display: block; white-space: nowrap; }
+    .date-sub { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; white-space: nowrap; }
+    .description-cell { min-width: 190px; max-width: 310px; overflow-wrap: anywhere; }
+    .delete-row { width: 34px; height: 34px; border: 1px solid rgba(255, 125, 145, .18); border-radius: 11px; color: var(--danger); background: rgba(255, 125, 145, .06); font-weight: 900; }
+    .empty { padding: 52px 20px; text-align: center; border: 1px dashed var(--line-strong); border-radius: 18px; color: var(--muted); }
+    .empty strong { display: block; margin-bottom: 6px; color: #dce8ef; font-size: 17px; }
+    .history-actions { display: flex; justify-content: flex-end; gap: 9px; flex-wrap: wrap; margin-top: 16px; }
+    .history-actions .button { min-height: 42px; padding: 0 15px; font-size: 12px; }
+
+    .notice { margin-top: 18px; padding: 15px 17px; border: 1px solid rgba(246, 201, 107, .22); border-radius: 16px; color: #d9caa5; background: rgba(246, 201, 107, .06); font-size: 12px; }
+    .notice strong { color: #ffe7a5; }
+
+    .toast { position: fixed; left: 50%; bottom: 24px; z-index: 50; transform: translate(-50%, 20px); padding: 12px 17px; border: 1px solid var(--line-strong); border-radius: 14px; color: #e7f2f8; background: rgba(13, 30, 49, .96); box-shadow: var(--shadow); opacity: 0; pointer-events: none; transition: opacity .2s ease, transform .2s ease; }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+    @media (max-width: 940px) {
+      .page-heading { align-items: flex-start; flex-direction: column; }
+      .privacy-note { text-align: left; }
+      .active-card { grid-template-columns: 1fr; }
+      .workspace { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 640px) {
+      .container { width: min(100% - 22px, 1220px); }
+      .topbar-inner { min-height: 64px; }
+      .brand small, .top-link.secondary { display: none; }
+      main { padding-top: 26px; }
+      .page-heading { margin-bottom: 18px; }
+      .active-card { padding: 22px; border-radius: 24px; }
+      .amount { font-size: 53px; }
+      .active-meta, .field-row, .actions, .summary-strip { grid-template-columns: 1fr; }
+      .panel-inner { padding: 19px; }
+      .wide { grid-column: auto; }
+      .history-actions { display: grid; grid-template-columns: 1fr 1fr; }
+      .history-actions .button { width: 100%; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      * { scroll-behavior: auto !important; transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="container topbar-inner">
+      <a class="brand" href="index.html">
+        <span class="brand-mark">KZ</span>
+        <span><strong>Kalkulator Zarobków</strong><small>lokalna aplikacja przeglądarkowa</small></span>
+      </a>
+      <div class="top-links">
+        <a class="top-link secondary" href="index.html">Strona projektu</a>
+        <a class="top-link" href="https://github.com/krzyswo/kalkulator">GitHub</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="container">
+      <div class="page-heading">
+        <div><div class="eyebrow">Bieżąca sesja</div><h1>Policz wartość swojego czasu.</h1></div>
+        <p class="privacy-note">Wszystkie ustawienia i wpisy historii są przechowywane lokalnie w tej przeglądarce. Aplikacja nie wysyła danych do serwera.</p>
+      </div>
+
+      <section class="active-card" aria-live="polite">
+        <div class="active-main">
+          <div class="active-top"><span class="status-pill idle" id="statusPill">GOTOWY</span><span class="active-label" id="activeModeLabel">Brak aktywnej sesji</span></div>
+          <div class="amount" id="liveAmount">0,00 zł</div>
+          <div class="time-line"><span id="liveDuration">00:00:00</span><span id="liveRate"> · uruchom licznik, aby rozpocząć</span></div>
+        </div>
+        <div class="active-meta">
+          <div class="stat"><span>Rozpoczęcie</span><strong id="activeStarted">—</strong></div>
+          <div class="stat"><span>Zapisane sesje</span><strong id="sessionCount">0</strong></div>
+          <div class="stat"><span>Łączna kwota</span><strong id="grandTotal">0,00 zł</strong></div>
+          <div class="stat"><span>Łączny czas</span><strong id="grandDuration">00:00:00</strong></div>
+        </div>
+      </section>
+
+      <div class="workspace">
+        <section class="panel">
+          <div class="panel-inner">
+            <div class="panel-header"><div><h2>Nowa sesja</h2><p>Wybierz sposób obliczenia i podaj kwotę.</p></div></div>
+
+            <div class="mode-tabs" role="tablist" aria-label="Tryb kalkulatora">
+              <button class="mode-tab active" type="button" role="tab" aria-selected="true" data-mode="monthly">Miesięczny</button>
+              <button class="mode-tab" type="button" role="tab" aria-selected="false" data-mode="hourly">Godzinowy</button>
+            </div>
+
+            <div class="field">
+              <label for="rateInput" id="rateLabel">Wynagrodzenie miesięczne brutto lub netto</label>
+              <input id="rateInput" type="number" min="0" step="0.01" inputmode="decimal" placeholder="np. 8000">
+              <p class="help" id="rateHelp">Obliczenie używa uproszczonego założenia 160 godzin pracy w miesiącu.</p>
+            </div>
+
+            <label class="check-row"><input id="includePast" type="checkbox"><span>Uwzględnij czas od wcześniejszej godziny dzisiaj</span></label>
+
+            <div class="field">
+              <label for="startTime">Godzina rozpoczęcia</label>
+              <input id="startTime" type="time" disabled>
+              <p class="help">Czas jest interpretowany w lokalnej strefie czasowej urządzenia.</p>
+            </div>
+
+            <div class="field">
+              <label for="description">Opis sesji</label>
+              <textarea id="description" maxlength="500" placeholder="np. analiza dokumentacji, spotkanie, praca nad projektem"></textarea>
+            </div>
+
+            <div class="actions">
+              <button class="button button-primary wide" id="startButton" type="button">Uruchom licznik</button>
+              <button class="button button-stop" id="stopButton" type="button" disabled>Zatrzymaj i zapisz</button>
+              <button class="button button-muted" id="cancelButton" type="button" disabled>Anuluj sesję</button>
+            </div>
+
+            <div class="notice"><strong>Zakres:</strong> wynik jest szacunkiem proporcjonalnym do czasu. Nie obejmuje podatków, składek, nadgodzin ani warunków konkretnej umowy.</div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-inner">
+            <div class="panel-header"><div><h2>Historia sesji</h2><p>Wpisy pozostają na tym urządzeniu do czasu ich usunięcia.</p></div></div>
+
+            <div class="summary-strip">
+              <div class="summary-item"><span>Sesje</span><strong id="historyCount">0</strong></div>
+              <div class="summary-item"><span>Łączny czas</span><strong id="historyDuration">00:00:00</strong></div>
+              <div class="summary-item"><span>Suma</span><strong id="historyTotal">0,00 zł</strong></div>
+            </div>
+
+            <div id="emptyHistory" class="empty"><strong>Brak zapisanych sesji</strong>Uruchom licznik i zatrzymaj go, aby dodać pierwszy wpis.</div>
+            <div id="tableContainer" class="table-wrap" hidden>
+              <table>
+                <thead><tr><th>Tryb</th><th>Czas</th><th>Kwota</th><th>Opis</th><th></th></tr></thead>
+                <tbody id="historyBody"></tbody>
+              </table>
+            </div>
+
+            <div class="history-actions">
+              <button class="button button-muted" id="exportButton" type="button" disabled>Eksportuj CSV</button>
+              <button class="button button-danger" id="clearButton" type="button" disabled>Wyczyść historię</button>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    'use strict';
+
+    const STORAGE_KEY = 'kalkulator-zarobkow:v2';
+    const MONTHLY_HOURS = 160;
+    const moneyFormatter = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN', minimumFractionDigits: 2 });
+    const dateFormatter = new Intl.DateTimeFormat('pl-PL', { year: 'numeric', month: '2-digit', day: '2-digit' });
+    const timeFormatter = new Intl.DateTimeFormat('pl-PL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+    const elements = {
+      modeTabs: [...document.querySelectorAll('[data-mode]')],
+      rateInput: document.getElementById('rateInput'),
+      rateLabel: document.getElementById('rateLabel'),
+      rateHelp: document.getElementById('rateHelp'),
+      includePast: document.getElementById('includePast'),
+      startTime: document.getElementById('startTime'),
+      description: document.getElementById('description'),
+      startButton: document.getElementById('startButton'),
+      stopButton: document.getElementById('stopButton'),
+      cancelButton: document.getElementById('cancelButton'),
+      statusPill: document.getElementById('statusPill'),
+      activeModeLabel: document.getElementById('activeModeLabel'),
+      liveAmount: document.getElementById('liveAmount'),
+      liveDuration: document.getElementById('liveDuration'),
+      liveRate: document.getElementById('liveRate'),
+      activeStarted: document.getElementById('activeStarted'),
+      sessionCount: document.getElementById('sessionCount'),
+      grandTotal: document.getElementById('grandTotal'),
+      grandDuration: document.getElementById('grandDuration'),
+      historyCount: document.getElementById('historyCount'),
+      historyDuration: document.getElementById('historyDuration'),
+      historyTotal: document.getElementById('historyTotal'),
+      emptyHistory: document.getElementById('emptyHistory'),
+      tableContainer: document.getElementById('tableContainer'),
+      historyBody: document.getElementById('historyBody'),
+      exportButton: document.getElementById('exportButton'),
+      clearButton: document.getElementById('clearButton'),
+      toast: document.getElementById('toast')
+    };
+
+    function defaultState() {
+      return {
+        mode: 'monthly',
+        inputs: { monthly: '', hourly: '', includePast: false, startTime: '', description: '' },
+        active: null,
+        history: []
+      };
+    }
+
+    function loadState() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY));
+        if (!parsed || typeof parsed !== 'object') return defaultState();
+        const clean = defaultState();
+        clean.mode = parsed.mode === 'hourly' ? 'hourly' : 'monthly';
+        clean.inputs = { ...clean.inputs, ...(parsed.inputs || {}) };
+        clean.active = parsed.active && Number.isFinite(Number(parsed.active.startedAt)) ? parsed.active : null;
+        clean.history = Array.isArray(parsed.history) ? parsed.history.filter((entry) => entry && Number.isFinite(Number(entry.earned))) : [];
+        return clean;
+      } catch (error) {
+        console.warn('Nie udało się odczytać zapisanych danych.', error);
+        return defaultState();
+      }
+    }
+
+    let state = loadState();
+    let timerId = null;
+    let toastTimer = null;
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function formatMoney(value) {
+      return moneyFormatter.format(Number.isFinite(value) ? value : 0);
+    }
+
+    function formatDuration(totalSeconds) {
+      const seconds = Math.max(0, Math.floor(totalSeconds || 0));
+      const hours = Math.floor(seconds / 3600);
+      const minutes = Math.floor((seconds % 3600) / 60);
+      const rest = seconds % 60;
+      return [hours, minutes, rest].map((part) => String(part).padStart(2, '0')).join(':');
+    }
+
+    function formatDateTime(timestamp) {
+      const date = new Date(Number(timestamp));
+      return { date: dateFormatter.format(date), time: timeFormatter.format(date) };
+    }
+
+    function modeName(mode) {
+      return mode === 'hourly' ? 'Godzinowy' : 'Miesięczny';
+    }
+
+    function ratePerSecond(mode, value) {
+      return mode === 'hourly' ? value / 3600 : value / MONTHLY_HOURS / 3600;
+    }
+
+    function showToast(message) {
+      elements.toast.textContent = message;
+      elements.toast.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => elements.toast.classList.remove('show'), 2600);
+    }
+
+    function syncInputsFromState() {
+      elements.modeTabs.forEach((button) => {
+        const selected = button.dataset.mode === state.mode;
+        button.classList.toggle('active', selected);
+        button.setAttribute('aria-selected', String(selected));
+      });
+      elements.rateInput.value = state.inputs[state.mode] || '';
+      elements.includePast.checked = Boolean(state.inputs.includePast);
+      elements.startTime.disabled = !elements.includePast.checked;
+      elements.startTime.value = state.inputs.startTime || '';
+      elements.description.value = state.inputs.description || '';
+      updateModeCopy();
+    }
+
+    function updateModeCopy() {
+      if (state.mode === 'hourly') {
+        elements.rateLabel.textContent = 'Stawka godzinowa';
+        elements.rateInput.placeholder = 'np. 46';
+        elements.rateHelp.textContent = 'Podana kwota jest dzielona przez 3600 sekund.';
+      } else {
+        elements.rateLabel.textContent = 'Wynagrodzenie miesięczne brutto lub netto';
+        elements.rateInput.placeholder = 'np. 8000';
+        elements.rateHelp.textContent = `Obliczenie używa uproszczonego założenia ${MONTHLY_HOURS} godzin pracy w miesiącu.`;
+      }
+    }
+
+    function getRequestedStartTime() {
+      if (!state.inputs.includePast) return Date.now();
+      const value = state.inputs.startTime;
+      if (!/^\d{2}:\d{2}$/.test(value)) throw new Error('Wybierz godzinę rozpoczęcia.');
+      const [hours, minutes] = value.split(':').map(Number);
+      const start = new Date();
+      start.setHours(hours, minutes, 0, 0);
+      if (start.getTime() > Date.now()) throw new Error('Godzina rozpoczęcia nie może być późniejsza niż teraz.');
+      return start.getTime();
+    }
+
+    function startSession() {
+      const value = Number(elements.rateInput.value.replace(',', '.'));
+      if (!Number.isFinite(value) || value <= 0) {
+        showToast('Podaj poprawną kwotę większą od zera.');
+        elements.rateInput.focus();
+        return;
+      }
+
+      if (state.active && !window.confirm('Aktywna sesja zostanie zastąpiona. Kontynuować?')) return;
+
+      let startedAt;
+      try {
+        startedAt = getRequestedStartTime();
+      } catch (error) {
+        showToast(error.message);
+        return;
+      }
+
+      state.inputs[state.mode] = String(elements.rateInput.value);
+      state.inputs.description = elements.description.value.trim();
+      state.active = {
+        id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+        mode: state.mode,
+        sourceValue: value,
+        ratePerSecond: ratePerSecond(state.mode, value),
+        startedAt,
+        description: state.inputs.description
+      };
+      saveState();
+      renderAll();
+      showToast('Licznik został uruchomiony.');
+    }
+
+    function stopSession() {
+      if (!state.active) return;
+      const endedAt = Date.now();
+      const durationSeconds = Math.max(0, (endedAt - Number(state.active.startedAt)) / 1000);
+      const earned = durationSeconds * Number(state.active.ratePerSecond);
+      const description = elements.description.value.trim() || state.active.description || '';
+
+      state.history.unshift({
+        id: state.active.id,
+        mode: state.active.mode,
+        sourceValue: Number(state.active.sourceValue),
+        startedAt: Number(state.active.startedAt),
+        endedAt,
+        durationSeconds,
+        earned,
+        description
+      });
+      state.active = null;
+      state.inputs.description = '';
+      saveState();
+      syncInputsFromState();
+      renderAll();
+      showToast('Sesja została zapisana w historii.');
+    }
+
+    function cancelSession() {
+      if (!state.active) return;
+      if (!window.confirm('Anulować aktywną sesję bez zapisywania jej w historii?')) return;
+      state.active = null;
+      saveState();
+      renderAll();
+      showToast('Aktywna sesja została anulowana.');
+    }
+
+    function deleteHistoryEntry(id) {
+      const entry = state.history.find((item) => String(item.id) === String(id));
+      if (!entry) return;
+      if (!window.confirm('Usunąć wybraną sesję z historii?')) return;
+      state.history = state.history.filter((item) => String(item.id) !== String(id));
+      saveState();
+      renderAll();
+      showToast('Wpis został usunięty.');
+    }
+
+    function clearHistory() {
+      if (!state.history.length) return;
+      if (!window.confirm('Usunąć całą historię sesji? Tej operacji nie można cofnąć.')) return;
+      state.history = [];
+      saveState();
+      renderAll();
+      showToast('Historia została wyczyszczona.');
+    }
+
+    function escapeCsv(value) {
+      const text = String(value ?? '');
+      return `"${text.replace(/"/g, '""')}"`;
+    }
+
+    function exportCsv() {
+      if (!state.history.length) return;
+      const header = ['Tryb', 'Wartość wejściowa', 'Start', 'Koniec', 'Czas sekund', 'Kwota PLN', 'Opis'];
+      const rows = state.history.map((entry) => [
+        modeName(entry.mode),
+        Number(entry.sourceValue).toFixed(2),
+        new Date(Number(entry.startedAt)).toLocaleString('pl-PL'),
+        new Date(Number(entry.endedAt)).toLocaleString('pl-PL'),
+        Math.round(Number(entry.durationSeconds)),
+        Number(entry.earned).toFixed(2),
+        entry.description || ''
+      ]);
+      const csv = '\uFEFF' + [header, ...rows].map((row) => row.map(escapeCsv).join(';')).join('\r\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `historia-zarobkow-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      showToast('Plik CSV został przygotowany.');
+    }
+
+    function renderActive() {
+      const active = state.active;
+      const hasActive = Boolean(active);
+      elements.stopButton.disabled = !hasActive;
+      elements.cancelButton.disabled = !hasActive;
+      elements.startButton.textContent = hasActive ? 'Uruchom nową sesję' : 'Uruchom licznik';
+
+      if (!active) {
+        elements.statusPill.textContent = 'GOTOWY';
+        elements.statusPill.classList.add('idle');
+        elements.activeModeLabel.textContent = 'Brak aktywnej sesji';
+        elements.liveAmount.textContent = formatMoney(0);
+        elements.liveDuration.textContent = '00:00:00';
+        elements.liveRate.textContent = ' · uruchom licznik, aby rozpocząć';
+        elements.activeStarted.textContent = '—';
+        clearInterval(timerId);
+        timerId = null;
+        return;
+      }
+
+      elements.statusPill.textContent = 'TRWA';
+      elements.statusPill.classList.remove('idle');
+      elements.activeModeLabel.textContent = `Tryb ${modeName(active.mode).toLowerCase()}`;
+      const started = formatDateTime(active.startedAt);
+      elements.activeStarted.textContent = `${started.date}, ${started.time}`;
+      const rateText = active.mode === 'hourly'
+        ? `${formatMoney(Number(active.sourceValue))} za godzinę`
+        : `${formatMoney(Number(active.sourceValue))} miesięcznie`;
+      elements.liveRate.textContent = ` · ${rateText}`;
+
+      const update = () => {
+        const duration = Math.max(0, (Date.now() - Number(active.startedAt)) / 1000);
+        elements.liveDuration.textContent = formatDuration(duration);
+        elements.liveAmount.textContent = formatMoney(duration * Number(active.ratePerSecond));
+      };
+      update();
+      clearInterval(timerId);
+      timerId = setInterval(update, 250);
+    }
+
+    function appendCell(row, text, className = '') {
+      const cell = document.createElement('td');
+      cell.textContent = text;
+      if (className) cell.className = className;
+      row.appendChild(cell);
+      return cell;
+    }
+
+    function renderHistory() {
+      elements.historyBody.replaceChildren();
+      const hasHistory = state.history.length > 0;
+      elements.emptyHistory.hidden = hasHistory;
+      elements.tableContainer.hidden = !hasHistory;
+      elements.exportButton.disabled = !hasHistory;
+      elements.clearButton.disabled = !hasHistory;
+
+      let total = 0;
+      let duration = 0;
+
+      state.history.forEach((entry) => {
+        total += Number(entry.earned) || 0;
+        duration += Number(entry.durationSeconds) || 0;
+        const row = document.createElement('tr');
+        appendCell(row, modeName(entry.mode));
+
+        const timeCell = document.createElement('td');
+        const start = formatDateTime(entry.startedAt);
+        const end = formatDateTime(entry.endedAt);
+        const dateMain = document.createElement('span');
+        dateMain.className = 'date-main';
+        dateMain.textContent = start.date;
+        const dateSub = document.createElement('span');
+        dateSub.className = 'date-sub';
+        dateSub.textContent = `${start.time}–${end.time} · ${formatDuration(entry.durationSeconds)}`;
+        timeCell.append(dateMain, dateSub);
+        row.appendChild(timeCell);
+
+        appendCell(row, formatMoney(Number(entry.earned)), 'money');
+        appendCell(row, entry.description || '—', 'description-cell');
+
+        const actionCell = document.createElement('td');
+        const deleteButton = document.createElement('button');
+        deleteButton.type = 'button';
+        deleteButton.className = 'delete-row';
+        deleteButton.textContent = '×';
+        deleteButton.title = 'Usuń wpis';
+        deleteButton.setAttribute('aria-label', 'Usuń wpis z historii');
+        deleteButton.dataset.deleteId = String(entry.id);
+        actionCell.appendChild(deleteButton);
+        row.appendChild(actionCell);
+        elements.historyBody.appendChild(row);
+      });
+
+      elements.historyCount.textContent = String(state.history.length);
+      elements.historyDuration.textContent = formatDuration(duration);
+      elements.historyTotal.textContent = formatMoney(total);
+      elements.sessionCount.textContent = String(state.history.length);
+      elements.grandDuration.textContent = formatDuration(duration);
+      elements.grandTotal.textContent = formatMoney(total);
+    }
+
+    function renderAll() {
+      renderActive();
+      renderHistory();
+    }
+
+    elements.modeTabs.forEach((button) => {
+      button.addEventListener('click', () => {
+        state.inputs[state.mode] = elements.rateInput.value;
+        state.mode = button.dataset.mode;
+        saveState();
+        syncInputsFromState();
+      });
+    });
+
+    elements.rateInput.addEventListener('input', () => {
+      state.inputs[state.mode] = elements.rateInput.value;
+      saveState();
+    });
+
+    elements.includePast.addEventListener('change', () => {
+      state.inputs.includePast = elements.includePast.checked;
+      elements.startTime.disabled = !elements.includePast.checked;
+      saveState();
+    });
+
+    elements.startTime.addEventListener('change', () => {
+      state.inputs.startTime = elements.startTime.value;
+      saveState();
+    });
+
+    elements.description.addEventListener('input', () => {
+      state.inputs.description = elements.description.value;
+      saveState();
+    });
+
+    elements.startButton.addEventListener('click', startSession);
+    elements.stopButton.addEventListener('click', stopSession);
+    elements.cancelButton.addEventListener('click', cancelSession);
+    elements.exportButton.addEventListener('click', exportCsv);
+    elements.clearButton.addEventListener('click', clearHistory);
+    elements.historyBody.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-delete-id]');
+      if (button) deleteHistoryEntry(button.dataset.deleteId);
+    });
+
+    syncInputsFromState();
+    renderAll();
+  </script>
+</body>
+</html>
