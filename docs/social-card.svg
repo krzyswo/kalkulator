@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">Kalkulator Zarobków</title>
+  <desc id="desc">Lokalny licznik wartości czasu pracy z historią sesji i eksportem CSV.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#07111f"/><stop offset=".58" stop-color="#0b1830"/><stop offset="1" stop-color="#113243"/></linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#59e0c1"/><stop offset="1" stop-color="#57a8ff"/></linearGradient>
+    <filter id="shadow"><feDropShadow dx="0" dy="24" stdDeviation="24" flood-color="#000" flood-opacity=".38"/></filter>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <circle cx="1080" cy="70" r="240" fill="#57a8ff" opacity=".12"/>
+  <circle cx="100" cy="600" r="260" fill="#59e0c1" opacity=".1"/>
+  <g transform="translate(72 86)">
+    <text x="0" y="0" fill="#59e0c1" font-family="Arial, sans-serif" font-size="20" font-weight="700" letter-spacing="3">LOKALNIE · BEZ KONTA · BEZ BACKENDU</text>
+    <text x="0" y="92" fill="#f5fbff" font-family="Arial, sans-serif" font-size="72" font-weight="800">Kalkulator</text>
+    <text x="0" y="172" fill="url(#accent)" font-family="Arial, sans-serif" font-size="72" font-weight="800">Zarobków</text>
+    <text x="0" y="230" fill="#abc0d1" font-family="Arial, sans-serif" font-size="27">Mierz czas pracy, śledź kwotę i eksportuj historię.</text>
+    <g transform="translate(0 292)">
+      <rect width="462" height="170" rx="28" fill="#0d1e32" stroke="#28475f" filter="url(#shadow)"/>
+      <text x="28" y="40" fill="#8fa7bb" font-family="Arial, sans-serif" font-size="15" font-weight="700">ZAROBIONA KWOTA</text>
+      <text x="28" y="108" fill="#f5fbff" font-family="Arial, sans-serif" font-size="58" font-weight="800">128,46 zł</text>
+      <circle cx="342" cy="39" r="7" fill="#59e0c1"/>
+      <text x="360" y="45" fill="#b8ffed" font-family="Arial, sans-serif" font-size="15" font-weight="700">SESJA TRWA</text>
+      <text x="28" y="145" fill="#8fa7bb" font-family="Arial, sans-serif" font-size="16">02:47:18 · stawka 46,00 zł/h</text>
+    </g>
+  </g>
+  <g transform="translate(720 110)">
+    <rect width="400" height="410" rx="34" fill="#0a192a" stroke="#29465e" filter="url(#shadow)"/>
+    <rect x="26" y="26" width="348" height="106" rx="22" fill="#12343d" stroke="#29655e"/>
+    <text x="48" y="57" fill="#9bb2c3" font-family="Arial, sans-serif" font-size="13">AKTYWNA SESJA</text>
+    <text x="48" y="102" fill="#f5fbff" font-family="Arial, sans-serif" font-size="36" font-weight="800">Godzinowy</text>
+    <rect x="26" y="150" width="348" height="72" rx="18" fill="#102338" stroke="#29465e"/>
+    <text x="48" y="180" fill="#9bb2c3" font-family="Arial, sans-serif" font-size="13">HISTORIA</text>
+    <text x="48" y="207" fill="#f5fbff" font-family="Arial, sans-serif" font-size="21" font-weight="700">12 zapisanych sesji</text>
+    <rect x="26" y="240" width="348" height="72" rx="18" fill="#102338" stroke="#29465e"/>
+    <text x="48" y="270" fill="#9bb2c3" font-family="Arial, sans-serif" font-size="13">PRZECHOWYWANIE</text>
+    <text x="48" y="297" fill="#59e0c1" font-family="Arial, sans-serif" font-size="21" font-weight="700">Dane w przeglądarce</text>
+    <rect x="26" y="330" width="166" height="52" rx="26" fill="url(#accent)"/>
+    <text x="109" y="363" text-anchor="middle" fill="#07111f" font-family="Arial, sans-serif" font-size="15" font-weight="800">START</text>
+    <rect x="208" y="330" width="166" height="52" rx="26" fill="#14283e" stroke="#35536b"/>
+    <text x="291" y="363" text-anchor="middle" fill="#e3eef5" font-family="Arial, sans-serif" font-size="15" font-weight="800">EKSPORT CSV</text>
+  </g>
+</svg>
