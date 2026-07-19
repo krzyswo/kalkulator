@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#07111f">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="Kalkulator Zarobków mierzy czas pracy i pokazuje szacowaną kwotę na podstawie wynagrodzenia miesięcznego lub stawki godzinowej. Dane pozostają w przeglądarce.">
+  <meta name="author" content="Krzysztof W.">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="pl_PL">
+  <meta property="og:title" content="Kalkulator Zarobków — licznik wartości czasu pracy">
+  <meta property="og:description" content="Uruchom licznik, zapisuj sesje i eksportuj historię do CSV. Bez konta, backendu i śledzenia.">
+  <meta property="og:url" content="https://krzyswo.github.io/kalkulator/">
+  <meta property="og:image" content="https://krzyswo.github.io/kalkulator/social-card.svg">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="canonical" href="https://krzyswo.github.io/kalkulator/">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <title>Kalkulator Zarobków — licznik wartości czasu pracy</title>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Kalkulator Zarobków",
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "Any",
+    "browserRequirements": "Modern web browser with JavaScript enabled",
+    "description": "Lokalny kalkulator czasu pracy i szacowanych zarobków z historią sesji oraz eksportem CSV.",
+    "url": "https://krzyswo.github.io/kalkulator/",
+    "codeRepository": "https://github.com/krzyswo/kalkulator",
+    "license": "https://opensource.org/licenses/MIT"
+  }
+  </script>
+  <style>
+    :root {
+      --bg: #07111f;
+      --bg-soft: #0b1728;
+      --panel: rgba(16, 35, 56, .76);
+      --panel-solid: #102338;
+      --line: rgba(148, 184, 211, .18);
+      --text: #f5fbff;
+      --muted: #9bb0c3;
+      --mint: #59e0c1;
+      --blue: #57a8ff;
+      --warning: #f5c96b;
+      --shadow: 0 28px 80px rgba(0, 0, 0, .34);
+      --radius: 24px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 82% 12%, rgba(87, 168, 255, .14), transparent 30rem),
+        radial-gradient(circle at 10% 75%, rgba(89, 224, 193, .11), transparent 32rem),
+        var(--bg);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.6;
+    }
+
+    a { color: inherit; }
+    button, a { -webkit-tap-highlight-color: transparent; }
+    .container { width: min(1160px, calc(100% - 40px)); margin: 0 auto; }
+    .skip-link { position: fixed; left: 16px; top: -80px; z-index: 100; padding: 12px 18px; color: #07111f; background: var(--mint); border-radius: 12px; font-weight: 800; }
+    .skip-link:focus { top: 16px; }
+
+    .site-header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      border-bottom: 1px solid transparent;
+      backdrop-filter: blur(18px);
+      background: rgba(7, 17, 31, .76);
+      transition: border-color .2s ease;
+    }
+    .site-header.scrolled { border-color: var(--line); }
+    .header-inner { min-height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+    .brand { display: inline-flex; align-items: center; gap: 12px; text-decoration: none; }
+    .brand-mark { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 14px; color: #07111f; background: linear-gradient(135deg, var(--mint), var(--blue)); font-weight: 900; }
+    .brand strong { display: block; font-size: 15px; letter-spacing: .02em; }
+    .brand small { display: block; color: var(--muted); font-size: 12px; }
+    .nav { display: flex; align-items: center; gap: 24px; }
+    .nav a { color: var(--muted); text-decoration: none; font-size: 14px; font-weight: 650; }
+    .nav a:hover { color: var(--text); }
+    .nav .nav-cta { padding: 10px 16px; color: #07111f; background: var(--mint); border-radius: 999px; }
+
+    .hero { padding: 92px 0 64px; overflow: hidden; }
+    .hero-grid { display: grid; grid-template-columns: 1.02fr .98fr; align-items: center; gap: 64px; }
+    .eyebrow { display: inline-flex; align-items: center; gap: 9px; color: var(--mint); font-size: 13px; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
+    .eyebrow::before { content: ""; width: 22px; height: 2px; background: var(--mint); border-radius: 2px; }
+    h1 { margin: 22px 0 22px; max-width: 780px; font-size: clamp(46px, 6vw, 78px); line-height: .98; letter-spacing: -.055em; }
+    h1 em { display: block; color: transparent; background: linear-gradient(90deg, var(--mint), var(--blue)); background-clip: text; font-style: normal; }
+    .hero-lead { margin: 0; max-width: 650px; color: #b8cad9; font-size: clamp(18px, 2vw, 21px); }
+    .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 34px; }
+    .button { min-height: 52px; display: inline-flex; align-items: center; justify-content: center; gap: 9px; padding: 0 22px; border: 1px solid var(--line); border-radius: 999px; text-decoration: none; font-weight: 800; transition: transform .2s ease, border-color .2s ease, background .2s ease; }
+    .button:hover { transform: translateY(-2px); }
+    .button-primary { color: #07111f; border-color: transparent; background: linear-gradient(90deg, var(--mint), #78efd6); box-shadow: 0 14px 34px rgba(89, 224, 193, .16); }
+    .button-secondary { background: rgba(16, 35, 56, .66); }
+    .button-secondary:hover { border-color: rgba(87, 168, 255, .48); }
+    .proof { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 38px; }
+    .proof div { padding: 14px 0; border-top: 1px solid var(--line); }
+    .proof strong { display: block; font-size: 18px; }
+    .proof span { display: block; color: var(--muted); font-size: 12px; }
+
+    .app-preview { position: relative; min-height: 520px; display: grid; place-items: center; }
+    .preview-glow { position: absolute; width: 390px; height: 390px; border-radius: 50%; background: rgba(87, 168, 255, .16); filter: blur(50px); }
+    .window { position: relative; width: min(100%, 510px); overflow: hidden; border: 1px solid rgba(143, 187, 220, .25); border-radius: 28px; background: rgba(10, 25, 42, .94); box-shadow: var(--shadow); transform: rotate(1.4deg); }
+    .window-bar { height: 52px; display: flex; align-items: center; justify-content: space-between; padding: 0 18px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+    .dots { display: flex; gap: 7px; }
+    .dots i { width: 8px; height: 8px; border-radius: 50%; background: #425b71; }
+    .window-content { padding: 22px; }
+    .live-card { padding: 24px; border: 1px solid rgba(89, 224, 193, .22); border-radius: 22px; background: linear-gradient(145deg, rgba(19, 51, 63, .84), rgba(11, 28, 45, .88)); }
+    .live-top { display: flex; justify-content: space-between; gap: 18px; align-items: flex-start; }
+    .label { color: var(--muted); font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+    .amount { margin-top: 8px; font-size: 46px; line-height: 1; font-weight: 850; letter-spacing: -.04em; }
+    .status { display: inline-flex; align-items: center; gap: 7px; padding: 7px 10px; color: #b9ffef; background: rgba(89, 224, 193, .12); border-radius: 999px; font-size: 11px; font-weight: 850; }
+    .status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--mint); box-shadow: 0 0 14px var(--mint); }
+    .timer { margin-top: 14px; color: #adc1d1; font-variant-numeric: tabular-nums; }
+    .preview-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+    .mini-card { padding: 18px; border: 1px solid var(--line); border-radius: 18px; background: var(--panel-solid); }
+    .mini-card strong { display: block; margin-top: 6px; font-size: 20px; }
+    .history-line { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; margin-top: 14px; padding: 15px 17px; border: 1px solid var(--line); border-radius: 17px; background: rgba(16, 35, 56, .7); }
+    .history-line span { display: block; color: var(--muted); font-size: 12px; }
+    .history-line b { font-size: 17px; }
+    .floating { position: absolute; padding: 12px 16px; border: 1px solid var(--line); border-radius: 16px; background: rgba(13, 30, 49, .9); box-shadow: 0 18px 45px rgba(0,0,0,.25); backdrop-filter: blur(10px); }
+    .floating strong { display: block; font-size: 13px; }
+    .floating span { color: var(--muted); font-size: 11px; }
+    .float-one { right: -10px; top: 72px; }
+    .float-two { left: -18px; bottom: 62px; }
+
+    .trust { border-block: 1px solid var(--line); background: rgba(8, 20, 34, .54); }
+    .trust-inner { min-height: 78px; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 16px 34px; color: var(--muted); font-size: 14px; }
+    .trust-inner strong { color: var(--text); }
+
+    .section { padding: 100px 0; }
+    .section-heading { max-width: 760px; margin-bottom: 40px; }
+    h2 { margin: 14px 0 14px; font-size: clamp(34px, 4.6vw, 54px); line-height: 1.06; letter-spacing: -.04em; }
+    .section-heading p { margin: 0; color: var(--muted); font-size: 18px; }
+    .feature-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .feature-card { min-height: 250px; padding: 26px; border: 1px solid var(--line); border-radius: var(--radius); background: linear-gradient(145deg, rgba(16, 35, 56, .82), rgba(9, 23, 39, .68)); }
+    .feature-icon { width: 46px; height: 46px; display: grid; place-items: center; border-radius: 15px; color: #07111f; background: linear-gradient(135deg, var(--mint), var(--blue)); font-weight: 900; }
+    .feature-card h3 { margin: 22px 0 10px; font-size: 21px; }
+    .feature-card p { margin: 0; color: var(--muted); }
+
+    .workflow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; counter-reset: steps; }
+    .step { position: relative; padding: 24px; border: 1px solid var(--line); border-radius: 22px; background: rgba(13, 30, 49, .64); counter-increment: steps; }
+    .step::before { content: "0" counter(steps); display: block; color: var(--mint); font-size: 13px; font-weight: 900; letter-spacing: .14em; }
+    .step h3 { margin: 22px 0 8px; }
+    .step p { margin: 0; color: var(--muted); font-size: 14px; }
+
+    .privacy-box { display: grid; grid-template-columns: 1fr .85fr; gap: 36px; align-items: center; padding: 44px; border: 1px solid rgba(89, 224, 193, .22); border-radius: 30px; background: linear-gradient(125deg, rgba(18, 52, 59, .7), rgba(13, 30, 49, .86)); box-shadow: var(--shadow); }
+    .privacy-box ul { margin: 20px 0 0; padding: 0; list-style: none; }
+    .privacy-box li { position: relative; margin-top: 12px; padding-left: 27px; color: #bdd0dd; }
+    .privacy-box li::before { content: "✓"; position: absolute; left: 0; color: var(--mint); font-weight: 900; }
+    .privacy-visual { padding: 26px; border: 1px solid var(--line); border-radius: 24px; background: rgba(7, 17, 31, .65); }
+    .storage-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+    .storage-row:last-child { border-bottom: 0; }
+    .storage-row span { color: var(--muted); }
+    .storage-row strong { color: var(--mint); font-size: 13px; }
+
+    .faq { display: grid; gap: 10px; max-width: 880px; }
+    details { padding: 20px 22px; border: 1px solid var(--line); border-radius: 18px; background: rgba(13, 30, 49, .6); }
+    summary { cursor: pointer; font-weight: 800; }
+    details p { margin: 14px 0 0; color: var(--muted); }
+
+    .cta { padding: 60px 0 110px; }
+    .cta-box { padding: 54px; text-align: center; border: 1px solid var(--line); border-radius: 32px; background: linear-gradient(135deg, rgba(87, 168, 255, .14), rgba(89, 224, 193, .13)); }
+    .cta-box h2 { margin-top: 0; }
+    .cta-box p { max-width: 680px; margin: 0 auto 28px; color: var(--muted); font-size: 18px; }
+    footer { padding: 30px 0 42px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+    .footer-inner { display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+    .footer-inner a { color: #c5d6e3; text-decoration: none; }
+
+    .reveal { opacity: 0; transform: translateY(18px); transition: opacity .65s ease, transform .65s ease; }
+    .reveal.visible { opacity: 1; transform: none; }
+
+    @media (max-width: 920px) {
+      .nav a:not(.nav-cta) { display: none; }
+      .hero { padding-top: 66px; }
+      .hero-grid, .privacy-box { grid-template-columns: 1fr; }
+      .app-preview { min-height: 480px; }
+      .feature-grid { grid-template-columns: 1fr 1fr; }
+      .workflow { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 640px) {
+      .container { width: min(100% - 26px, 1160px); }
+      .header-inner { min-height: 68px; }
+      .brand small { display: none; }
+      .nav .nav-cta { padding: 9px 12px; font-size: 12px; }
+      .hero { padding-top: 54px; }
+      .hero-grid { gap: 34px; }
+      h1 { font-size: clamp(43px, 14vw, 64px); }
+      .proof { grid-template-columns: 1fr; }
+      .proof div { padding: 10px 0; }
+      .app-preview { min-height: 430px; }
+      .window { transform: none; }
+      .amount { font-size: 38px; }
+      .floating { display: none; }
+      .feature-grid, .workflow { grid-template-columns: 1fr; }
+      .section { padding: 78px 0; }
+      .privacy-box, .cta-box { padding: 28px 22px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      .reveal { opacity: 1; transform: none; transition: none; }
+      .button { transition: none; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main">Przejdź do treści</a>
+
+  <header class="site-header" data-header>
+    <div class="container header-inner">
+      <a class="brand" href="#top" aria-label="Kalkulator Zarobków — strona główna">
+        <span class="brand-mark">KZ</span>
+        <span><strong>Kalkulator Zarobków</strong><small>lokalny licznik czasu i kwoty</small></span>
+      </a>
+      <nav class="nav" aria-label="Nawigacja główna">
+        <a href="#funkcje">Funkcje</a>
+        <a href="#jak-dziala">Jak działa</a>
+        <a href="#prywatnosc">Prywatność</a>
+        <a class="nav-cta" href="app.html">Uruchom</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero" id="top">
+      <div class="container hero-grid">
+        <div class="reveal">
+          <div class="eyebrow">Prosty licznik wartości pracy</div>
+          <h1>Zobacz, ile zarabiasz <em>w czasie rzeczywistym.</em></h1>
+          <p class="hero-lead">Wybierz pensję miesięczną albo stawkę godzinową, uruchom sesję i obserwuj szacowaną kwotę. Historia zostaje w Twojej przeglądarce.</p>
+          <div class="hero-actions">
+            <a class="button button-primary" href="app.html">Uruchom kalkulator</a>
+            <a class="button button-secondary" href="https://github.com/krzyswo/kalkulator">Zobacz kod na GitHubie</a>
+          </div>
+          <div class="proof" aria-label="Najważniejsze informacje">
+            <div><strong>2 tryby</strong><span>miesięczny i godzinowy</span></div>
+            <div><strong>0 kont</strong><span>bez logowania i backendu</span></div>
+            <div><strong>CSV</strong><span>lokalny eksport historii</span></div>
+          </div>
+        </div>
+
+        <div class="app-preview reveal" aria-label="Podgląd aplikacji">
+          <div class="preview-glow" aria-hidden="true"></div>
+          <div class="window">
+            <div class="window-bar"><div class="dots"><i></i><i></i><i></i></div><span>Kalkulator Zarobków</span><span>LOCAL</span></div>
+            <div class="window-content">
+              <div class="live-card">
+                <div class="live-top"><div><div class="label">Zarobiona kwota</div><div class="amount">128,46 zł</div></div><div class="status">TRWA</div></div>
+                <div class="timer">02:47:18 · 46,00 zł za godzinę</div>
+              </div>
+              <div class="preview-stats">
+                <div class="mini-card"><div class="label">Tryb</div><strong>Godzinowy</strong></div>
+                <div class="mini-card"><div class="label">Sesje</div><strong>12 zapisanych</strong></div>
+              </div>
+              <div class="history-line"><div><b>Analiza dokumentacji</b><span>Dzisiaj · 08:04–10:51</span></div><strong>128,46 zł</strong></div>
+            </div>
+          </div>
+          <div class="floating float-one"><strong>Autozapis</strong><span>sesja przetrwa odświeżenie</span></div>
+          <div class="floating float-two"><strong>Dane lokalne</strong><span>localStorage + eksport CSV</span></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="trust">
+      <div class="container trust-inner"><strong>Bez instalacji</strong><span>HTML</span><span>CSS</span><span>JavaScript</span><span>GitHub Pages</span><span>localStorage</span></div>
+    </div>
+
+    <section class="section" id="funkcje">
+      <div class="container">
+        <div class="section-heading reveal"><div class="eyebrow">Najważniejsze funkcje</div><h2>Wszystko, czego potrzebujesz do prostego pomiaru sesji.</h2><p>Aplikacja nie próbuje zastępować systemu kadrowego. Skupia się na czasie, kwocie, opisie wykonanej pracy i czytelnej historii.</p></div>
+        <div class="feature-grid">
+          <article class="feature-card reveal"><div class="feature-icon">01</div><h3>Dwa sposoby liczenia</h3><p>Podaj miesięczne wynagrodzenie albo stawkę godzinową. Kalkulator automatycznie wyznaczy wartość każdej sekundy pracy.</p></article>
+          <article class="feature-card reveal"><div class="feature-icon">02</div><h3>Sesja od wcześniejszej godziny</h3><p>Możesz rozpocząć licznik od teraz albo uwzględnić czas od wskazanej godziny tego samego dnia.</p></article>
+          <article class="feature-card reveal"><div class="feature-icon">03</div><h3>Historia i opis pracy</h3><p>Po zatrzymaniu sesji zapisz jej opis, czas rozpoczęcia, czas zakończenia i obliczoną kwotę.</p></article>
+          <article class="feature-card reveal"><div class="feature-icon">04</div><h3>Przywracanie po odświeżeniu</h3><p>Aktywna sesja jest zapisywana lokalnie. Odświeżenie karty nie zeruje rozpoczętego pomiaru.</p></article>
+          <article class="feature-card reveal"><div class="feature-icon">05</div><h3>Eksport CSV</h3><p>Pobierz historię w formacie zgodnym z arkuszami kalkulacyjnymi i zachowaj własne archiwum.</p></article>
+          <article class="feature-card reveal"><div class="feature-icon">06</div><h3>Telefon i komputer</h3><p>Układ dopasowuje się do małych ekranów, a najważniejsze działania pozostają łatwo dostępne.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="jak-dziala">
+      <div class="container">
+        <div class="section-heading reveal"><div class="eyebrow">Prosty proces</div><h2>Od stawki do zapisanej sesji w czterech krokach.</h2></div>
+        <div class="workflow">
+          <article class="step reveal"><h3>Wybierz tryb</h3><p>Użyj pensji miesięcznej lub stawki godzinowej.</p></article>
+          <article class="step reveal"><h3>Podaj wartość</h3><p>Wpisz kwotę i opcjonalny wcześniejszy czas rozpoczęcia.</p></article>
+          <article class="step reveal"><h3>Uruchom licznik</h3><p>Obserwuj czas sesji oraz rosnącą szacowaną kwotę.</p></article>
+          <article class="step reveal"><h3>Zapisz lub eksportuj</h3><p>Zatrzymaj pomiar, dodaj opis i pobierz historię jako CSV.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="prywatnosc">
+      <div class="container privacy-box reveal">
+        <div>
+          <div class="eyebrow">Dane pod Twoją kontrolą</div>
+          <h2>Bez konta, serwera i zewnętrznego śledzenia.</h2>
+          <p style="color:var(--muted);font-size:18px">Kalkulator działa jako statyczna aplikacja. Historia i ustawienia są zapisywane przez przeglądarkę wyłącznie na używanym urządzeniu.</p>
+          <ul><li>brak logowania i rejestracji,</li><li>brak wysyłania sesji do backendu,</li><li>brak bibliotek analitycznych,</li><li>lokalne tworzenie pliku CSV.</li></ul>
+        </div>
+        <div class="privacy-visual" aria-label="Sposób przechowywania danych">
+          <div class="storage-row"><span>Aktywna sesja</span><strong>localStorage</strong></div>
+          <div class="storage-row"><span>Historia</span><strong>localStorage</strong></div>
+          <div class="storage-row"><span>Ustawienia</span><strong>localStorage</strong></div>
+          <div class="storage-row"><span>Eksport</span><strong>plik lokalny</strong></div>
+          <div class="storage-row"><span>Backend</span><strong>brak</strong></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="section-heading reveal"><div class="eyebrow">FAQ</div><h2>Najczęstsze pytania.</h2></div>
+        <div class="faq">
+          <details class="reveal"><summary>Czy wynik odpowiada kwocie netto?</summary><p>Nie. To proporcjonalny szacunek wartości czasu. Kalkulator nie uwzględnia podatków, składek, nadgodzin ani zapisów umowy.</p></details>
+          <details class="reveal"><summary>Jak liczona jest pensja miesięczna?</summary><p>Aplikacja dzieli podaną kwotę przez 160 godzin, a następnie przez 3600 sekund. To jawne, uproszczone założenie.</p></details>
+          <details class="reveal"><summary>Czy utracę aktywną sesję po odświeżeniu?</summary><p>Nie. Aktywna sesja jest zapisana w pamięci przeglądarki i zostanie przywrócona po ponownym otwarciu aplikacji na tym samym urządzeniu.</p></details>
+          <details class="reveal"><summary>Jak usunąć dane?</summary><p>Użyj przycisku czyszczenia historii albo usuń dane witryny w ustawieniach przeglądarki.</p></details>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta">
+      <div class="container cta-box reveal">
+        <h2>Uruchom licznik i zacznij nową sesję.</h2>
+        <p>Nie musisz niczego instalować. Otwórz aplikację, wybierz tryb i podaj stawkę.</p>
+        <div class="hero-actions" style="justify-content:center;margin-top:0"><a class="button button-primary" href="app.html">Otwórz kalkulator</a><a class="button button-secondary" href="https://github.com/krzyswo/kalkulator">Repozytorium GitHub</a></div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container footer-inner"><span>Kalkulator Zarobków · projekt open source</span><span><a href="https://github.com/krzyswo/kalkulator">Kod źródłowy</a> · <a href="https://github.com/krzyswo/kalkulator/blob/main/LICENSE">MIT</a></span></div>
+  </footer>
+
+  <script>
+    const header = document.querySelector('[data-header]');
+    const revealItems = document.querySelectorAll('.reveal');
+    const onScroll = () => header.classList.toggle('scrolled', window.scrollY > 8);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+
+    if ('IntersectionObserver' in window && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+            observer.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.12 });
+      revealItems.forEach((item) => observer.observe(item));
+    } else {
+      revealItems.forEach((item) => item.classList.add('visible'));
+    }
+  </script>
+</body>
+</html>
